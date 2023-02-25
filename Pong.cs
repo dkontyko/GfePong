@@ -1,25 +1,38 @@
 using System.CodeDom;
 using System.Drawing;
+using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
 namespace GfePong {
     public class Program {
         public static void Main() {
             var mainWindow = new MainForm {
+                //FormBorderStyle = FormBorderStyle.FixedSingle,
                 Size = new Size(800, 400),
                 Text = "GFE Pong",
-                StartPosition = FormStartPosition.CenterScreen
+                StartPosition = FormStartPosition.CenterScreen,
+                BackColor = Color.Gray
             };
 
+            mainWindow.createNewGame();
 
 
 
-            mainWindow.ShowDialog();
+
+            Application.Run(mainWindow);
         }
     }
 
     partial class MainForm : Form {
         internal static readonly Brush BlackBrush = new SolidBrush(Color.Black);
+        /*
+        protected override Size DefaultSize {
+            get {
+                return new Size(800, 400);
+            }
+        }
+        */
+
         //private Rectangle leftBumper = new Rectangle(5, 5, 10, 50);
 
         //private int leftBumperMovement = 0;
@@ -36,8 +49,12 @@ namespace GfePong {
             //leftBumperMovementTimer.Tick += LeftBumperMovementTimer_Tick;
 
             this.SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
-            game = new PongGame(this);
 
+
+        }
+
+        internal void createNewGame() {
+            game = new PongGame(this);
         }
 
         protected override void OnPaint(PaintEventArgs e) {
@@ -81,62 +98,95 @@ namespace GfePong {
     }
 
     class PongGame {
+        private const int bumperWidth = 10;
+        private const int bumperHeight = 50;
+        private const int bumperPadding = 5;
+        private const int ballDiameter = 10;
         /// <summary>
         /// Holds a reference to MainForm for calculating positions
         /// of objects and boundaries.
         /// </summary>
         private readonly Form gameForm;
 
-        private PongBumper leftBumper;
+        private PongObject leftBumper;
         private int leftBumperMovement = 0;
 
-        private PongBumper rightBumper;
+        private PongObject rightBumper;
         private int rightBumperMovement = 0;
+
+        private PongBall ball;
+        private int ballCourse = 0;
+        private int ballSpeed = 0;
 
         internal PongGame(Form gameForm) {
             this.gameForm = gameForm;
 
-            leftBumper = new PongBumper(
-                PongBumper.bumperPadding + (PongBumper.bumperWidth / 2),
-                gameForm.Height / 2
+            leftBumper = new PongObject(
+                bumperPadding + (bumperWidth / 2),
+                gameForm.Height / 2,
+                bumperWidth,
+                bumperHeight
             );
 
-            rightBumper = new PongBumper(
-                gameForm.Width - PongBumper.bumperPadding - (PongBumper.bumperWidth / 2),
-                gameForm.Height / 2
+            rightBumper = new PongObject(
+                gameForm.Width - bumperPadding - (bumperWidth / 2),
+                gameForm.Height / 2,
+                bumperWidth,
+                bumperHeight
+            );
+
+            ball = new PongBall(
+                gameForm.Width / 2,
+                gameForm.Height / 2,
+                ballDiameter,
+                ballDiameter
             );
         }
 
         internal void Paint(Graphics g) {
-            g.FillRectangle(MainForm.BlackBrush, leftBumper.Bumper);
-            g.FillRectangle(MainForm.BlackBrush, rightBumper.Bumper);
+            //g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            g.FillRectangle(MainForm.BlackBrush, leftBumper.Rect);
+            g.FillRectangle(MainForm.BlackBrush, rightBumper.Rect);
+            g.FillEllipse(MainForm.BlackBrush, ball.Rect);
         }
     }
+
 
     /// <summary>
     /// Wraps a Rectangle struct. The X and Y properties in this class
     /// represent the center of the rectangle. This properties automatically
     /// translate them to the correct values for the struct.
     /// </summary>
-    class PongBumper {
-        public const int bumperWidth = 10;
-        public const int bumperHeight = 50;
-        public const int bumperPadding = 5;
+    class PongObject {
 
-        private Rectangle bumper;
-        public Rectangle Bumper { get => bumper; }
+
+        private Rectangle rect;
+        public Rectangle Rect { get => rect; }
 
         public int X {
-            get => bumper.X + (bumperWidth / 2);
-            set => bumper.X = value - (bumperWidth / 2);
+            get => rect.X + (Width / 2);
+            set => rect.X = value - (Height / 2);
         }
         public int Y {
-            get => bumper.Y + (bumperHeight / 2);
-            set => bumper.Y = value - (bumperHeight / 2);
+            get => rect.Y + (Height / 2);
+            set => rect.Y = value - (Height / 2);
         }
 
-        internal PongBumper(int x, int y) {
-            bumper = new Rectangle(x, y, bumperWidth, bumperHeight);
+        public int Height { get; }
+        public int Width { get; }
+
+        internal PongObject(int x, int y, int width, int height) {
+            Height = height;
+            Width = width;
+            rect = new Rectangle(0, 0, Width, Height);
+            this.X = x;
+            this.Y = y;
         }
     }
+
+    class PongBall : PongObject {
+        internal PongBall(int x, int y, int width, int height) : base(x, y, width, height) { }
+    }
+
 }
