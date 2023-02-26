@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Timers;
+using System;
 
 namespace GfePong {
     public class Program {
@@ -11,13 +12,11 @@ namespace GfePong {
                 Size = new Size(800, 400),
                 Text = "GFE Pong",
                 StartPosition = FormStartPosition.CenterScreen,
-                BackColor = Color.Gray
+                BackColor = Color.Gray,
+                Margin = new Padding(0)
             };
 
             mainWindow.CreateNewGame();
-
-
-
 
             Application.Run(mainWindow);
         }
@@ -38,7 +37,7 @@ namespace GfePong {
         public MainForm() : base() {
             //leftBumperMovementTimer.Tick += LeftBumperMovementTimer_Tick;
 
-            
+
 
             this.SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
 
@@ -92,9 +91,9 @@ namespace GfePong {
         protected override void OnKeyUp(KeyEventArgs e) {
             //TODO: fix race condition that happens when rapidly switching
             // between up and down keys.
-            if(e.KeyCode == Keys.Q || e.KeyCode == Keys.A) {
+            if (e.KeyCode == Keys.Q || e.KeyCode == Keys.A) {
                 game.UpdateBumperVector(PongGame.BumperSide.Left, PongGame.BumperDirection.None);
-            } else if(e.KeyCode == Keys.P || e.KeyCode == Keys.L) {
+            } else if (e.KeyCode == Keys.P || e.KeyCode == Keys.L) {
                 game.UpdateBumperVector(PongGame.BumperSide.Right, PongGame.BumperDirection.None);
             }
 
@@ -107,6 +106,7 @@ namespace GfePong {
         private const int bumperHeight = 50;
         private const int bumperPadding = 5;
         private const int ballDiameter = 10;
+
         /// <summary>
         /// Holds a reference to MainForm for calculating positions
         /// of objects and boundaries.
@@ -122,28 +122,50 @@ namespace GfePong {
         internal PongGame(Form gameForm) {
             this.gameForm = gameForm;
 
+            var bumperBoundaries = new Boundaries {
+                Xmin = 0,
+                Xmax = gameForm.ClientRectangle.Width,
+                Ymin = 0,
+                Ymax = gameForm.ClientRectangle.Height
+            };
+
+            var ballBoundaries = new Boundaries {
+                Xmin = -ballDiameter,
+                Xmax = gameForm.ClientRectangle.Width + ballDiameter,
+                Ymin = (ballDiameter / 2),
+                Ymax = gameForm.ClientRectangle.Height - (ballDiameter / 2)
+            };
+
             // Need to use ClientRectangle so the calculations
             // aren't thrown off by the title bar, borders, etc.
             leftBumper = new PongObject(
                 bumperPadding + (bumperWidth / 2),
                 gameForm.ClientRectangle.Height / 2,
                 bumperWidth,
-                bumperHeight
+                bumperHeight,
+                bumperBoundaries
             );
 
             rightBumper = new PongObject(
                 gameForm.ClientRectangle.Width - bumperPadding - (bumperWidth / 2),
                 gameForm.ClientRectangle.Height / 2,
                 bumperWidth,
-                bumperHeight
+                bumperHeight,
+                bumperBoundaries
             );
 
             ball = new PongBall(
                 gameForm.ClientRectangle.Width / 2,
                 gameForm.ClientRectangle.Height / 2,
                 ballDiameter,
-                ballDiameter
+                ballDiameter,
+                ballBoundaries
             );
+
+            var random = new Random();
+
+            ball.XVelocity = random.Next(-5, 6);
+            ball.YVelocity = random.Next(-5, 6);
         }
 
         internal void Paint(Graphics g) {
@@ -158,13 +180,13 @@ namespace GfePong {
             var bumper = side == BumperSide.Left ? leftBumper : rightBumper;
             switch (direction) {
                 case BumperDirection.Up:
-                    bumper.Vector = -5;
+                    bumper.YVelocity = -5;
                     break;
                 case BumperDirection.Down:
-                    bumper.Vector = 5;
+                    bumper.YVelocity = 5;
                     break;
                 case BumperDirection.None:
-                    bumper.Vector = 0;
+                    bumper.YVelocity = 0;
                     break;
             }
         }
@@ -174,8 +196,9 @@ namespace GfePong {
         /// of a movie).
         /// </summary>
         internal void UpdateFrame() {
-            leftBumper.Y += leftBumper.Vector;
-            rightBumper.Y += rightBumper.Vector;
+            leftBumper.MoveObject();
+            rightBumper.MoveObject();
+            ball.MoveObject();
         }
 
         internal enum BumperSide { Left, Right }
@@ -190,42 +213,75 @@ namespace GfePong {
     /// translate them to the correct values for the struct.
     /// </summary>
     class PongObject {
+        protected readonly Boundaries boundaries;
 
-
-        private Rectangle rect;
-        public Rectangle Rect { get => rect; }
+        protected Rectangle _rect;
+        public Rectangle Rect { get => _rect; }
 
         public int X {
-            get => rect.X + (Width / 2);
-            set => rect.X = value - (Width / 2);
+            get => _rect.X + (Width / 2);
+            set {
+                if (value >= boundaries.Xmin && value <= boundaries.Xmax) {
+                    _rect.X = value - (Width / 2);
+                }
+
+            }
         }
         public int Y {
-            get => rect.Y + (Height / 2);
-            set => rect.Y = value - (Height / 2);
+            get => _rect.Y + (Height / 2);
+            set {
+                if (value >= boundaries.Ymin && value <= boundaries.Ymax) {
+                    _rect.Y = value - (Height / 2);
+                }
+            }
         }
 
         [Range(-5, 5)]
-        public int Vector { get; set; }
+        public int XVelocity { get; set; }
+        [Range(-5, 5)]
+        public int YVelocity { get; set; }
 
         [Range(0, 1000)]
         public int Height { get; }
         [Range(0, 1000)]
         public int Width { get; }
 
-        internal PongObject(int x, int y, int width, int height) {
+        internal PongObject(int x, int y, int width, int height, Boundaries boundaries) {
+            // Order matters here, as X and Y depend on the boundaries being set properly.
+            // Order also matters for _rect, depends on Height and Width.
+            this.boundaries = boundaries;
             Height = height;
             Width = width;
-            rect = new Rectangle(0, 0, Width, Height);
+            _rect = new Rectangle(0, 0, Width, Height);
             this.X = x;
             this.Y = y;
+        }
+
+        internal void MoveObject() {
+            X += XVelocity;
+            Y += YVelocity;
         }
     }
 
     class PongBall : PongObject {
 
-        [Range(0, 360)]
-        public int Course { get; set; }
-        internal PongBall(int x, int y, int width, int height) : base(x, y, width, height) { }
+        internal PongBall(int x, int y, int width, int height, Boundaries boundaries) : base(x, y, width, height, boundaries) { }
+
+        internal new void MoveObject() {
+            X += XVelocity;
+            var newY = Y + YVelocity;
+
+            if (newY < boundaries.Ymin || newY > boundaries.Ymax) {
+                YVelocity = -YVelocity;
+                newY = Y + YVelocity;
+            }
+
+            Y = newY;
+        }
+    }
+
+    struct Boundaries {
+        public int Xmin, Xmax, Ymin, Ymax;
     }
 
 }
