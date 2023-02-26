@@ -13,7 +13,7 @@ namespace GfePong {
                 Text = "GFE Pong",
                 StartPosition = FormStartPosition.CenterScreen,
                 BackColor = Color.Gray,
-                Margin = new Padding(0)
+                Margin = Padding.Empty
             };
 
             mainWindow.CreateNewGame();
@@ -35,13 +35,7 @@ namespace GfePong {
         };
 
         public MainForm() : base() {
-            //leftBumperMovementTimer.Tick += LeftBumperMovementTimer_Tick;
-
-
-
             this.SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
-
-
         }
 
         internal void CreateNewGame() {
@@ -54,20 +48,11 @@ namespace GfePong {
             base.OnPaint(e);
             game.Paint(e.Graphics);
         }
-        /*
-        private void LeftBumperMovementTimer_Tick(object sender, System.EventArgs e) {
-            leftBumper.Y += leftBumperMovement;
-
-            this.Invalidate();
-        }
-        */
 
         private void MovementTimerEventHandler(object source, ElapsedEventArgs e) {
             game.UpdateFrame();
             this.Invalidate();
         }
-
-
 
         protected override void OnKeyDown(KeyEventArgs e) {
             switch (e.KeyCode) {
@@ -112,11 +97,8 @@ namespace GfePong {
         /// of objects and boundaries.
         /// </summary>
         private readonly Form gameForm;
-
         private readonly PongObject leftBumper;
-
         private readonly PongObject rightBumper;
-
         private readonly PongBall ball;
 
         internal PongGame(Form gameForm) {
@@ -199,6 +181,14 @@ namespace GfePong {
             leftBumper.MoveObject();
             rightBumper.MoveObject();
             ball.MoveObject();
+
+            CheckCollision();
+        }
+
+        private void CheckCollision() {
+            if (ball.Rect.IntersectsWith(leftBumper.Rect) || ball.Rect.IntersectsWith(rightBumper.Rect)) {
+                ball.XVelocity = -ball.XVelocity;
+            }
         }
 
         internal enum BumperSide { Left, Right }
