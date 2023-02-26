@@ -7,7 +7,7 @@ namespace GfePong {
     public class Program {
         public static void Main() {
             var mainWindow = new MainForm {
-                //FormBorderStyle = FormBorderStyle.FixedSingle,
+                FormBorderStyle = FormBorderStyle.FixedSingle,
                 Size = new Size(800, 400),
                 Text = "GFE Pong",
                 StartPosition = FormStartPosition.CenterScreen,
@@ -64,7 +64,7 @@ namespace GfePong {
         */
 
         private void MovementTimerEventHandler(object source, ElapsedEventArgs e) {
-            game.MoveObjects();
+            game.UpdateFrame();
             this.Invalidate();
         }
 
@@ -90,6 +90,8 @@ namespace GfePong {
         }
 
         protected override void OnKeyUp(KeyEventArgs e) {
+            //TODO: fix race condition that happens when rapidly switching
+            // between up and down keys.
             if(e.KeyCode == Keys.Q || e.KeyCode == Keys.A) {
                 game.UpdateBumperVector(PongGame.BumperSide.Left, PongGame.BumperDirection.None);
             } else if(e.KeyCode == Keys.P || e.KeyCode == Keys.L) {
@@ -167,7 +169,11 @@ namespace GfePong {
             }
         }
 
-        internal void MoveObjects() {
+        /// <summary>
+        /// Updates the game's GUI frame (like advancing frames
+        /// of a movie).
+        /// </summary>
+        internal void UpdateFrame() {
             leftBumper.Y += leftBumper.Vector;
             rightBumper.Y += rightBumper.Vector;
         }
