@@ -1,5 +1,7 @@
+using System.ComponentModel.DataAnnotations;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Timers;
 
 namespace GfePong {
     public class Program {
@@ -12,7 +14,7 @@ namespace GfePong {
                 BackColor = Color.Gray
             };
 
-            mainWindow.createNewGame();
+            mainWindow.CreateNewGame();
 
 
 
@@ -24,19 +26,29 @@ namespace GfePong {
     partial class MainForm : Form {
         internal static readonly Brush BlackBrush = new SolidBrush(Color.Black);
         internal static readonly Brush BlueBrush = new SolidBrush(Color.Blue);
- 
+
         private PongGame game;
+
+        private readonly System.Timers.Timer movementTimer = new System.Timers.Timer {
+            Interval = 50,
+            AutoReset = true,
+            Enabled = true
+        };
 
         public MainForm() : base() {
             //leftBumperMovementTimer.Tick += LeftBumperMovementTimer_Tick;
+
+            
 
             this.SetStyle(ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
 
 
         }
 
-        internal void createNewGame() {
+        internal void CreateNewGame() {
             game = new PongGame(this);
+
+            movementTimer.Elapsed += MovementTimerEventHandler;
         }
 
         protected override void OnPaint(PaintEventArgs e) {
@@ -49,18 +61,28 @@ namespace GfePong {
 
             this.Invalidate();
         }
+        */
 
-        
+        private void MovementTimerEventHandler(object source, ElapsedEventArgs e) {
+            game.MoveObjects();
+            this.Invalidate();
+        }
+
+
 
         protected override void OnKeyDown(KeyEventArgs e) {
-            base.OnKeyDown(e);
-
             switch (e.KeyCode) {
                 case Keys.Q:
-                    leftBumperMovement = -5;
+                    game.UpdateBumperVector(PongGame.BumperSide.Left, PongGame.BumperDirection.Up);
                     break;
                 case Keys.A:
-                    leftBumperMovement = 5;
+                    game.UpdateBumperVector(PongGame.BumperSide.Left, PongGame.BumperDirection.Down);
+                    break;
+                case Keys.P:
+                    game.UpdateBumperVector(PongGame.BumperSide.Right, PongGame.BumperDirection.Up);
+                    break;
+                case Keys.L:
+                    game.UpdateBumperVector(PongGame.BumperSide.Right, PongGame.BumperDirection.Down);
                     break;
             }
 
@@ -68,15 +90,14 @@ namespace GfePong {
         }
 
         protected override void OnKeyUp(KeyEventArgs e) {
-            base.OnKeyUp(e);
-
-            if (e.KeyCode == Keys.Down || e.KeyCode == Keys.Up) {
-                leftBumperMovement = 0;
+            if(e.KeyCode == Keys.Q || e.KeyCode == Keys.A) {
+                game.UpdateBumperVector(PongGame.BumperSide.Left, PongGame.BumperDirection.None);
+            } else if(e.KeyCode == Keys.P || e.KeyCode == Keys.L) {
+                game.UpdateBumperVector(PongGame.BumperSide.Right, PongGame.BumperDirection.None);
             }
 
             this.Invalidate();
         }
-        */
     }
 
     class PongGame {
@@ -90,15 +111,11 @@ namespace GfePong {
         /// </summary>
         private readonly Form gameForm;
 
-        private PongObject leftBumper;
-        private int leftBumperMovement = 0;
+        private readonly PongObject leftBumper;
 
-        private PongObject rightBumper;
-        private int rightBumperMovement = 0;
+        private readonly PongObject rightBumper;
 
-        private PongBall ball;
-        private int ballCourse = 0;
-        private int ballSpeed = 0;
+        private readonly PongBall ball;
 
         internal PongGame(Form gameForm) {
             this.gameForm = gameForm;
@@ -134,6 +151,30 @@ namespace GfePong {
             g.FillRectangle(MainForm.BlueBrush, rightBumper.Rect);
             g.FillEllipse(MainForm.BlackBrush, ball.Rect);
         }
+
+        internal void UpdateBumperVector(BumperSide side, BumperDirection direction) {
+            var bumper = side == BumperSide.Left ? leftBumper : rightBumper;
+            switch (direction) {
+                case BumperDirection.Up:
+                    bumper.Vector = -5;
+                    break;
+                case BumperDirection.Down:
+                    bumper.Vector = 5;
+                    break;
+                case BumperDirection.None:
+                    bumper.Vector = 0;
+                    break;
+            }
+        }
+
+        internal void MoveObjects() {
+            leftBumper.Y += leftBumper.Vector;
+            rightBumper.Y += rightBumper.Vector;
+        }
+
+        internal enum BumperSide { Left, Right }
+        internal enum BumperDirection { Up, Down, None }
+
     }
 
 
@@ -157,7 +198,12 @@ namespace GfePong {
             set => rect.Y = value - (Height / 2);
         }
 
+        [Range(-5, 5)]
+        public int Vector { get; set; }
+
+        [Range(0, 1000)]
         public int Height { get; }
+        [Range(0, 1000)]
         public int Width { get; }
 
         internal PongObject(int x, int y, int width, int height) {
@@ -170,6 +216,9 @@ namespace GfePong {
     }
 
     class PongBall : PongObject {
+
+        [Range(0, 360)]
+        public int Course { get; set; }
         internal PongBall(int x, int y, int width, int height) : base(x, y, width, height) { }
     }
 
