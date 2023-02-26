@@ -1,6 +1,4 @@
-using System.CodeDom;
 using System.Drawing;
-using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
 namespace GfePong {
@@ -25,24 +23,8 @@ namespace GfePong {
 
     partial class MainForm : Form {
         internal static readonly Brush BlackBrush = new SolidBrush(Color.Black);
-        /*
-        protected override Size DefaultSize {
-            get {
-                return new Size(800, 400);
-            }
-        }
-        */
-
-        //private Rectangle leftBumper = new Rectangle(5, 5, 10, 50);
-
-        //private int leftBumperMovement = 0;
-        /*
-        private readonly Timer leftBumperMovementTimer = new Timer {
-            Enabled = true,
-            Interval = 50
-        };
-        */
-
+        internal static readonly Brush BlueBrush = new SolidBrush(Color.Blue);
+ 
         private PongGame game;
 
         public MainForm() : base() {
@@ -121,23 +103,25 @@ namespace GfePong {
         internal PongGame(Form gameForm) {
             this.gameForm = gameForm;
 
+            // Need to use ClientRectangle so the calculations
+            // aren't thrown off by the title bar, borders, etc.
             leftBumper = new PongObject(
                 bumperPadding + (bumperWidth / 2),
-                gameForm.Height / 2,
+                gameForm.ClientRectangle.Height / 2,
                 bumperWidth,
                 bumperHeight
             );
 
             rightBumper = new PongObject(
-                gameForm.Width - bumperPadding - (bumperWidth / 2),
-                gameForm.Height / 2,
+                gameForm.ClientRectangle.Width - bumperPadding - (bumperWidth / 2),
+                gameForm.ClientRectangle.Height / 2,
                 bumperWidth,
                 bumperHeight
             );
 
             ball = new PongBall(
-                gameForm.Width / 2,
-                gameForm.Height / 2,
+                gameForm.ClientRectangle.Width / 2,
+                gameForm.ClientRectangle.Height / 2,
                 ballDiameter,
                 ballDiameter
             );
@@ -147,7 +131,7 @@ namespace GfePong {
             //g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
             g.FillRectangle(MainForm.BlackBrush, leftBumper.Rect);
-            g.FillRectangle(MainForm.BlackBrush, rightBumper.Rect);
+            g.FillRectangle(MainForm.BlueBrush, rightBumper.Rect);
             g.FillEllipse(MainForm.BlackBrush, ball.Rect);
         }
     }
@@ -166,7 +150,7 @@ namespace GfePong {
 
         public int X {
             get => rect.X + (Width / 2);
-            set => rect.X = value - (Height / 2);
+            set => rect.X = value - (Width / 2);
         }
         public int Y {
             get => rect.Y + (Height / 2);
