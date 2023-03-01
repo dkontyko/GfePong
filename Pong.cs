@@ -42,6 +42,11 @@ namespace GfePong {
             game = new PongGame(this);
 
             movementTimer.Elapsed += MovementTimerEventHandler;
+
+            //TODO: Create event for game end state
+            //TODO: Create start screen, button to start
+            //TODO: Create instruction splash screen
+            //TODO: Create computer opponent
         }
 
         protected override void OnPaint(PaintEventArgs e) {
@@ -183,12 +188,22 @@ namespace GfePong {
             ball.MoveObject();
 
             CheckCollision();
+
+            //TODO: Check game end
         }
 
         private void CheckCollision() {
             if (ball.Rect.IntersectsWith(leftBumper.Rect) || ball.Rect.IntersectsWith(rightBumper.Rect)) {
                 ball.XVelocity = -ball.XVelocity;
             }
+        }
+
+        private bool IsEndState() {
+            if (ball.X < ball.boundaries.Xmin || ball.X > ball.boundaries.Xmax) {
+                return true;
+            }
+
+            return false;
         }
 
         internal enum BumperSide { Left, Right }
@@ -203,7 +218,10 @@ namespace GfePong {
     /// translate them to the correct values for the struct.
     /// </summary>
     class PongObject {
-        protected readonly Boundaries boundaries;
+        /// <summary>
+        /// These values are based on the center point (height / 2 and width / 2) of the object.
+        /// </summary>
+        internal readonly Boundaries boundaries;
 
         protected Rectangle _rect;
         public Rectangle Rect { get => _rect; }
